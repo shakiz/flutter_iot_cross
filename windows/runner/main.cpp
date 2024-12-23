@@ -4,6 +4,9 @@
 
 #include "flutter_window.h"
 #include "utils.h"
+#include <flutter/method_channel.h>
+#include <flutter/plugin_registrar_windows.h>
+#include <string>
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
@@ -40,4 +43,38 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   ::CoUninitialize();
   return EXIT_SUCCESS;
+}
+
+// Load the DLL and execute the function
+std::string ExecuteDllFunction(const std::string& function_name) {
+    HINSTANCE hDLL = LoadLibrary(TEXT("YourLibrary.dll"));
+    if (hDLL == nullptr) {
+        return "Failed to load DLL";
+    }
+
+    typedef int (*FunctionType)();
+    FunctionType func = (FunctionType)GetProcAddress(hDLL, function_name.c_str());
+    if (func == nullptr) {
+        FreeLibrary(hDLL);
+        return "Failed to find function";
+    }
+
+    int result = func();
+    FreeLibrary(hDLL);
+    return "Function executed successfully with result: " + std::to_string(result);
+}
+
+// Handle Flutter method calls
+void HandleMethodCall(
+        const flutter::MethodCall<flutter::EncodableValue>& call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+    if (call.method_name().compare("executeDllFunction") == 0) {
+        const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+        auto function_name = std::get<std::string>(args->at(flutter::EncodableValue("functionName")));
+
+        std::string output = ExecuteDllFunction(function_name);
+        result->Success(flutter::EncodableValue(output));
+    } else {
+        result->NotImplemented();
+    }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -7,6 +7,7 @@ import 'package:printing/printing.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
+
   final String title;
 
   @override
@@ -14,6 +15,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  MethodChannel methodChannel = const MethodChannel('com.example.dll_executor');
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +27,29 @@ class _MyHomePageState extends State<MyHomePage> {
       body: PdfPreview(
         build: (format) => _generatePdf(format, "Print Doc"),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Open a dll file from here
+          executeDllFunction(context);
+        },
+        tooltip: 'Open DLL File',
+        child: const Icon(Icons.window),
+      ),
     );
+  }
+
+  Future<void> executeDllFunction(BuildContext context) async {
+    try {
+      final result = await methodChannel.invokeMethod('executeDllFunction', {
+        'functionName': 'YourFunctionName',
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result),
+      ));
+      debugPrint(result);
+    } catch (e) {
+      debugPrint("Error: $e");
+    }
   }
 
   Future<Uint8List> _generatePdf(PdfPageFormat format, String title) async {
